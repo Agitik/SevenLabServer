@@ -1,5 +1,7 @@
 package NetworkExchange;
 
+import PutAndGetFromDB.CollectionFiller;
+
 /**
  * Класс, который распаковывает запрос пользователя
  * @author Dima Tolochek
@@ -64,6 +66,7 @@ public class UnPacker {
                 ans = CommandExecuter.registration(pack);
                 break;
         }
+        CollectionFiller.updateCollectionFromDB();
         return ans;
     }
 }

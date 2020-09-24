@@ -105,7 +105,12 @@ public class Ticket implements Comparable<Ticket>, Serializable {
     @Override
     public int compareTo(Ticket o) {
         int a = (int) this.price * this.creationDate.getDayOfYear();
-        int b = (int) o.price * o.creationDate.getDayOfYear();
-        return Integer.compare(a, b);
+        try {
+            int b = (int) o.price * o.creationDate.getDayOfYear();
+            return Integer.compare(a, b);
+        } catch (NullPointerException e){
+            int b = (int) o.price * LocalDate.now().getDayOfYear();
+            return Integer.compare(a, b);
+        }
     }
 }

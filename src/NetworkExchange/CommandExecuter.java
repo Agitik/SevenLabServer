@@ -46,10 +46,10 @@ public class CommandExecuter {
     public static AnswerPack clear(QuestionPack qp){
         AnswerPack ap = new AnswerPack();
         if(BaseTicketBDCommands.clearTicketsTable(qp.arg.user)){
-            TicketCollection.clearTickets();
+            CollectionFiller.updateCollectionFromDB();
             ap.answer.add("Все объекты коллекции удалены.");
         }else{
-            ap.answer.add("Произошла ошибка в процессе удаления");
+            ap.answer.add("Команда выполнена");
         }
         return ap;
     }
@@ -115,7 +115,7 @@ public class CommandExecuter {
         if (isIDreal) {
             Ticket t = TicketCollection.getCopy().get(pack.arg.key);
             if (BaseTicketBDCommands.delCurrentTicket(pack.arg.user, t.getId())) {
-                TicketCollection.delTicket(pack.arg.key);
+                CollectionFiller.updateCollectionFromDB();
             }
             ap.answer.add("Команда выполнена!");
         } else {
@@ -130,7 +130,7 @@ public class CommandExecuter {
      */
     public static AnswerPack replace_if_greater(QuestionPack pack){
         AnswerPack ap = new AnswerPack();
-        Ticket rep = TicketCollection.getCopy().get(pack.arg.key);
+        Ticket rep = pack.arg.ticket;
         TicketCollection.getCopy().values().stream()
                 .filter(ticket -> ticket.compareTo(rep) > 0)
                 .forEach(ticket -> {
@@ -148,10 +148,11 @@ public class CommandExecuter {
         AnswerPack ap = new AnswerPack();
         Set<Long> res = TicketCollection.getCopy().keySet();
         res.forEach(r -> {
-            if(r < pack.arg.key){
+            if(r > pack.arg.key){
                 BaseTicketBDCommands.delCurrentTicket(pack.arg.user, r);
             }
         });
+        CollectionFiller.updateCollectionFromDB();
         ap.answer.add("\nКоманда выполнена!");
         return ap;
     }
@@ -168,6 +169,7 @@ public class CommandExecuter {
                 BaseTicketBDCommands.delCurrentTicket(pack.arg.user, r);
             }
         });
+        CollectionFiller.updateCollectionFromDB();
         ap.answer.add("\nКоманда выполнена!");
         return ap;
     }

@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TicketCollection {
     static HashMap<Long, Ticket> tickets = new HashMap<>();
 
-    public static LocalDate makingDay;
+    public static LocalDate makingDay = LocalDate.now();
 
     public static void addTicket(Ticket ticket, Long key){
         ReentrantLock locker = new ReentrantLock();

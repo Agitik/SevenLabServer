@@ -15,6 +15,7 @@ import java.sql.SQLException;
 public class CollectionFiller {
     public static void updateCollectionFromDB(){
         try {
+            TicketCollection.clearTickets();
             ResultSet resultSet = Primal_Query_Makers.queryWithIncludedValues("SELECT * FROM public.tickets");
             while (resultSet.next()){
                 Ticket t = TicketMakerFromDB.makeTicketFromDB(resultSet);
