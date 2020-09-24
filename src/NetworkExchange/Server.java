@@ -5,20 +5,23 @@ import DBWorker.db_config;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.Scanner;
 import java.util.Set;
-
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class Server {
     public static boolean ExitCode = false;
 
     public static void server(int PORT) throws IOException, ClassNotFoundException {
+        ExecutorService readClient = Executors.newCachedThreadPool();
+        ExecutorService executeCommand = Executors.newCachedThreadPool();
+        ExecutorService send_answer = Executors.newFixedThreadPool(5);
         Selector selector = Selector.open();
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.bind(new InetSocketAddress("localhost", PORT));
@@ -39,30 +42,78 @@ public class Server {
                 SelectionKey key = iter.next();
                 int interestOps = key.interestOps();
                 if (key.isAcceptable() & !ExitCode) {
-                    SocketChannel client = serverSocket.accept();
-                    client.configureBlocking(false);
-                    client.register(selector, SelectionKey.OP_READ);
+                    Runnable readCallClient = () -> {
+                        SocketChannel client = null;
+                        try {
+                            client = serverSocket.accept();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            client.configureBlocking(false);
+                        } catch (IOException e) {
+                            System.out.println("IO в потоке");
+                        }
+                        try {
+                            client.register(selector, SelectionKey.OP_READ);
+                        } catch (ClosedChannelException e) {
+                            System.out.println("CCE в потоке");
+                        }
+                    };
+                    readClient.submit(readCallClient);
                 }
                 if (key.isReadable() & !ExitCode) {
-                    SocketChannel client = (SocketChannel) key.channel();
-                    client.read(buffer);
+                    Runnable callableExe = () -> {
+                        SocketChannel client = (SocketChannel) key.channel();
+                        try {
+                            client.read(buffer);
+                        } catch (IOException e) {
+                            System.out.println("Косяк в потоке exe");
+                        }
 
-                    //Обработка вопроса
-                    ByteArrayInputStream bais = new ByteArrayInputStream(buffer.array());
-                    ObjectInputStream ois = new ObjectInputStream(bais);
-                    QuestionPack qp = (QuestionPack) ois.readObject();
-                    AnswerPack ap = UnPacker.UnPackAndExecute(qp);
+                        //Обработка вопроса
+                        ByteArrayInputStream bais = new ByteArrayInputStream(buffer.array());
+                        ObjectInputStream ois = null;
+                        try {
+                            ois = new ObjectInputStream(bais);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        QuestionPack qp = null;
+                        try {
+                            qp = (QuestionPack) ois.readObject();
+                        } catch (IOException | ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        AnswerPack ap = UnPacker.UnPackAndExecute(qp);
+                        Runnable answer = () -> {
+                            //Подготовка ответа
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            ObjectOutputStream oos = null;
+                            try {
+                                oos = new ObjectOutputStream(baos);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            try {
+                                oos.writeObject(ap);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
 
-                    //Подготовка ответа
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    ObjectOutputStream oos = new ObjectOutputStream(baos);
-                    oos.writeObject(ap);
+                            byte[] data = baos.toByteArray();
 
-                    byte[] data = baos.toByteArray();
-
-                    client.write(ByteBuffer.wrap(data));
-                    buffer.clear();
-                    key.cancel();
+                            try {
+                                client.write(ByteBuffer.wrap(data));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            buffer.clear();
+                            key.cancel();
+                        };
+                        send_answer.submit(answer);
+                    };
+                    executeCommand.submit(callableExe);
                 }
                 iter.remove();
             }
