@@ -6,16 +6,28 @@ import PutAndGetFromDB.CollectionFiller;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
+import java.util.Scanner;
 
 
 public class ServerMain {
+    public static boolean Exit = false;
     public static int PORT = 9000;
     public static void main(String[] args) {
-        db_config.setDataBase("localhost");
-        CollectionFiller.updateCollectionFromDB();
-        start();
+        Runnable startServer = () -> {
+            db_config.setDataBase("localhost");
+            CollectionFiller.updateCollectionFromDB();
+            start();
+        };
+        Thread server = new Thread(startServer);
+        server.start();
+        while (!Exit){
+            Scanner scanner = new Scanner(System.in);
+            if (scanner.nextLine().toLowerCase().trim().equals("exit")){
+                Exit = true;
+                System.out.println("Сервер отключен!");
+            }
+        }
     }
-
     public static void start(){
         try {
             Server.server(PORT);

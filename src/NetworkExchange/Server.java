@@ -14,11 +14,11 @@ import java.util.concurrent.Executors;
 
 
 public class Server {
-    public static boolean ExitCode = false;
     public static ExecutorService sendForClient = Executors.newFixedThreadPool(5);
     public static ExecutorService readClient = Executors.newCachedThreadPool();
     public static ExecutorService exeClient = Executors.newCachedThreadPool();
     public static void server(int PORT) throws IOException, ClassNotFoundException {
+        boolean ExitCode = ServerMain.Exit;
         Selector selector = Selector.open();
         ServerSocketChannel serverSocket = ServerSocketChannel.open();
         serverSocket.bind(new InetSocketAddress("localhost", PORT));
@@ -26,11 +26,6 @@ public class Server {
         serverSocket.register(selector, SelectionKey.OP_ACCEPT);
         Scanner scr = new Scanner(System.in);
         while (!ExitCode) {
-            if (System.in.available() > 0) {
-                if (scr.next().equals("exit")) {
-                    ExitCode = true;
-                }
-            }
             selector.select(2000);
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
             Iterator<SelectionKey> iter = selectedKeys.iterator();
@@ -47,6 +42,12 @@ public class Server {
                     key.cancel();
                 }
                 iter.remove();
+            }
+            ExitCode = ServerMain.Exit;
+            if(ExitCode){
+                sendForClient.shutdown();
+                readClient.shutdown();
+                exeClient.shutdown();
             }
         }
     }

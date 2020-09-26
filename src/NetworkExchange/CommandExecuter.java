@@ -249,7 +249,6 @@ public class CommandExecuter {
         try {
             ResultSet resultSet = Primal_Query_Makers.queryWithIncludedValues("SELECT * FROM users WHERE login = '" + pack.arg.user.login
                     + "' AND password = '" + pack.arg.user.password + "';");
-            ap.answer.add("Данные указаны правильно.");
             ap.status = resultSet.next();
         }catch (SQLException e){
             ap.answer.add("Ошибка запроса логина.");
